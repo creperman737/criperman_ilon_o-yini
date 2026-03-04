@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ilon o‘yini – Coin & Shop</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{height:100vh;background:linear-gradient(-45deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);background-size:400% 400%;animation:rainbow 18s ease infinite;color:#fff;font-family:Arial,sans-serif;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+@keyframes rainbow{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
+canvas{background:rgba(0,0,0,.6);border:4px solid #fff;box-shadow:0 0 50px #fff;border-radius:12px;image-rendering:pixelated;width:95vw;max-width:500px;height:70vh;max-height:700px}
+#hud{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:20px;background:rgba(0,255,51,.8);padding:10px 20px;border-radius:20px;font-weight:bold}
+#overlay{position:fixed;inset:0;background:linear-gradient(-45deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);backdrop-filter:blur(10px);display:flex;align-items:flex-start;justify-content:center;padding-top:40px;z-index:200}
+.box{background:linear-gradient(145deg,#5d73ff,#002374);padding:40px;border-radius:20px;text-align:center;max-width:90vw;max-height:90vh;overflow-y:auto;border:2px solid #0f0;box-shadow:0 20px 50px rgba(0,255,170,.3)}
+h2{margin-bottom:20px;color:#0f0}
+button{padding:15px 30px;margin:10px;font-size:1.3rem;border:none;border-radius:15px;cursor:pointer;font-weight:bold;transition:.3s}
+.primary{background:linear-gradient(45deg,#0f0,#0c0);color:#000}
+.primary:hover{transform:scale(1.05);box-shadow:0 10px 20px rgba(0,255,170,.4)}
+.shop-btn{background:#334;color:#fff}
+.shop-btn:hover{background:#445}
+.buy-btn{background:#fa0;color:#000}
+.buy-btn:disabled{background:#444;cursor:not-allowed;opacity:.6}
+.skin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:15px;margin:20px 0}
+.skin-item{border:2px solid #444;border-radius:12px;padding:10px;cursor:pointer;transition:.2s}
+.skin-item.active,.skin-item:hover{border-color:#0f0;box-shadow:0 0 15px #0f0}
+.skin-img{width:80px;height:80px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 8px}
+#controls{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);z-index:150;display:none}
+.dpad{display:flex;flex-direction:column;align-items:center;gap:10px}
+.dpad-row{display:flex;gap:80px}
+.ctrl-btn{width:80px;height:80px;font-size:2.5rem;background:rgba(0,255,170,.2);color:#fff;border:4px solid #0f0;border-radius:50%;cursor:pointer;transition:.2s}
+.ctrl-btn:active{background:#0f0;color:#000;transform:scale(1.1)}
+@media(max-width:600px){.dpad-row{gap:50px}.ctrl-btn{width:65px;height:65px;font-size:2rem}canvas{height:60vh}}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+  Ball: <b id="score">0</b> • Coins: <b id="coins">0</b> • Rekord: <b id="high">0</b>
+</div>
+
+<div id="overlay"><div class="box" id="overlayContent"></div></div>
+
+<div id="controls">
+  <div class="dpad">
+    <button class="ctrl-btn" id="up">▲</button>
+    <div class="dpad-row">
+      <button class="ctrl-btn" id="left">◀</button>
+      <button class="ctrl-btn" id="down">▼</button>
+      <button class="ctrl-btn" id="right">▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────── Ma'lumotlar
+let coins = parseInt(localStorage.getItem('snakeCoins') || '0');
+let highScore = parseInt(localStorage.getItem('snakeHigh') || '0');
+let ownedSkins = JSON.parse(localStorage.getItem('snakeOwnedSkins') || '[0]');
+let selectedSkin = parseInt(localStorage.getItem('snakeSelectedSkin') || '0');
+let tailColor = localStorage.getItem('snakeTailColor') || '#00cc77'; // default dum rangi
+
+const headSkins = [
+  {id:0,name:"Steve",src:"rasmlar/bosh4.png",price:0},
+  {id:1,name:"Philza",src:"rasmlar/bosh1.webp",price:500},
+  {id:2,name:"Wither",src:"rasmlar/bosh2.jpg",price:10000},
+  {id:3,name:"Creeper",src:"rasmlar/bosh3.jpg",price:15000},
+  {id:4,name:"Skeleton",src:"rasmlar/bosh5.jpg",price:25000},
+  {id:5,name:"Dragon",src:"rasmlar/bosh6.png",price:30000},
+  {id:6,name:"Notch",src:"rasmlar/bosh7.png",price:20000},
+  {id:7,name:"Technoblade",src:"rasmlar/bosh8.jpg",price:50000},
+  {id:8,name:"Sapnap",src:"rasmlar/bosh9.png",price:40000},
+  {id:9,name:"TommyInnit",src:"rasmlar/bosh10.jpg",price:60000},
+  {id:10,name:"Herobrine",src:"rasmlar/bosh11.webp",price:70000},
+  {id:11,name:"Enderman",src:"rasmlar/bosh12.png",price:80000},
+  {id:12,name:"Ant-Man",src:"rasmlar/bosh13.png",price:90000},
+  {id:13,name:"Ironman",src:"rasmlar/bosh14.png",price:100000},
+];
+
+const tailColors = [
+  {name: "Yashil (default)", color: "#00cc77", price: 0},
+  {name: "Qizil", color: "#ff3366", price: 100},
+  {name: "Moviy", color: "#44aaff", price: 200},
+  {name: "Sariq", color: "#ffdd44", price: 300},
+  {name: "Binafsha", color: "#aa44ff", price: 500},
+  {name: "Oq", color: "#ffffff", price: 1000},
+  {name: "Jigarang", color: "#653700", price: 2000},
+  {name: "Pushti", color: "#ff69b4", price: 400},
+  {name: "To'q sariq", color: "#ff8c00", price: 600},
+
+  // Qo'shimcha yangi ranglar (qora tashqari)
+  {name: "Neon ko'k", color: "#00ffff", price: 800},           // yorqin neon
+  {name: "Limon yashil", color: "#ccff00", price: 900},        // yorqin yashil
+  {name: "Lavanda", color: "#c8a2c8", price: 700},             // pastel binafsha
+  {name: "Metallik kumush", color: "#c0c0c0", price: 1500},    // metall ko'rinish
+  {name: "Qizil olov", color: "#ff4500", price: 1200},         // yorqin qizil
+  {name: "Turkuaz", color: "#40e0d0", price: 1100},            // dengiz rangi
+  {name: "Oltin", color: "#ffd700", price: 2500}               // premium oltin
+];
+
+let headImg = new Image();
+let appleImg = new Image();
+headImg.src = headSkins[selectedSkin].src;
+appleImg.src = "rasmlar/ovqat.webp"; // sizda bor fayl
+
+// ────────────────────────────────────────────── Funksiyalar
+function saveData() {
+    localStorage.setItem('snakeCoins', coins);
+    localStorage.setItem('snakeHigh', highScore);
+    localStorage.setItem('snakeOwnedSkins', JSON.stringify(ownedSkins));
+    localStorage.setItem('snakeSelectedSkin', selectedSkin);
+    localStorage.setItem('snakeTailColor', tailColor);
+}
+
+function updateCoinsDisplay() {
+    document.getElementById('coins').textContent = coins;
+    if (document.getElementById('shopCoins')) document.getElementById('shopCoins').textContent = coins;
+}
+
+function loadHeadSkin() {
+    headImg.src = headSkins[selectedSkin].src;
+}
+
+function showStartScreen() {
+    document.getElementById('overlayContent').innerHTML = `
+        <h2>🐍 Ilon O'yini</h2>
+        <p style="opacity:0.9; margin:20px 0 30px;">
+            Har bir olmani ye → +1 coin to'pla!<br>
+            Shopdan bosh va dum rangini o'zgartirish mumkin.
+        </p>
+        <button id="playBtn" class="primary">O'ynash</button>
+        <button id="shopBtn" class="shop-btn">Shop (Coins: <span id="shopCoins">${coins}</span>)</button>
+        <button id="settingsBtn" class="shop-btn" style="margin-top:15px;">⚙️ Sozlamalar</button>
+    `;
+    document.getElementById('playBtn').onclick = startGame;
+    document.getElementById('shopBtn').onclick = showShop;
+    document.getElementById('settingsBtn').onclick = showSettings;
+    document.getElementById('overlay').style.display = 'flex';
+}
+
+function showSettings() {
+    document.getElementById('overlayContent').innerHTML = `
+        <h2>⚙️ Sozlamalar</h2>
+        <div style="text-align:left; margin:20px 0;">
+            <p><strong>Til:</strong></p>
+            <button onclick="changeLanguage('uz')" class="shop-btn" style="width:45%;">🇺🇿 O'zbek</button>
+            <button onclick="changeLanguage('en')" class="shop-btn" style="width:45%;">🇬🇧 English</button>
+            <p style="margin-top:20px;"><strong>Tezlik:</strong></p>
+            <button onclick="setSpeed(280)" class="shop-btn" style="width:30%;">Sekin</button>
+            <button onclick="setSpeed(200)" class="shop-btn" style="width:30%;">Normal</button>
+            <button onclick="setSpeed(120)" class="shop-btn" style="width:30%;">Tez</button>
+        </div>
+        <button onclick="fullResetGame()" class="primary" style="background:#ff4444; width:100%; margin:15px 0;">
+            🔄 To'liq 0dan boshlash
+        </button>
+        <button onclick="showStartScreen()" class="shop-btn">Orqaga</button>
+    `;
+}
+
+let currentLang = localStorage.getItem('snakeLang') || 'uz';
+let gameSpeed = 200;
+
+function changeLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('snakeLang', lang);
+    showStartScreen();
+    alert(lang === 'uz' ? 'Til o\'zbek tiliga o\'zgartirildi!' : 'Language changed!');
+}
+
+function setSpeed(ms) {
+    gameSpeed = ms;
+    if (gameRunning) {
+        clearInterval(gameTimer);
+        gameTimer = setInterval(update, gameSpeed);
+    }
+    alert('Tezlik o\'zgartirildi: ' + ms + 'ms');
+}
+
+function fullResetGame() {
+    if (confirm('HAQIQATDAN HAM HAMMASI 0 DAN BOSHLANSINMI?\n\nBarcha tangalar, rekord va skinlar o‘chib ketadi!')) {
+        coins = 0;
+        highScore = 0;
+        ownedSkins = [0];
+        selectedSkin = 0;
+        tailColor = '#00cc77';
+        saveData();
+        updateCoinsDisplay();
+        document.getElementById('score').textContent = '0';
+        document.getElementById('coins').textContent = '0';
+        document.getElementById('high').textContent = '0';
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        showStartScreen();
+        alert('Hammasi 0 dan yangilandi!\nMenyuga qaytdingiz.');
+    }
+}
+
+// Shop (dum ranglari qo'shildi)
+function showShop() {
+    let html = '<h2>🛒 Shop</h2><p>Coins: <b>' + coins + '</b></p>';
+
+    html += '<div style="display:flex; gap:30px; justify-content:center; flex-wrap:wrap;">';
+
+    // Chap taraf: Bosh skinlari
+    html += '<div style="flex:1; min-width:200px;"><h3>Ilon boshlari</h3><div class="skin-grid">';
+    headSkins.forEach(skin => {
+        const owned = ownedSkins.includes(skin.id);
+        const isSelected = selectedSkin === skin.id;
+        html += `
+            <div class="skin-item ${isSelected ? 'active' : ''}" onclick="selectSkin(${skin.id})">
+                <img class="skin-img" src="${skin.src}" alt="${skin.name}">
+                <p>${skin.name}</p>
+                ${owned 
+                    ? (isSelected ? '<small>Tanlangan</small>' : '<button class="primary small" onclick="event.stopPropagation();selectSkin(' + skin.id + ')">Tanlash</button>')
+                    : `<button class="buy-btn ${coins >= skin.price ? '' : 'disabled'}" onclick="event.stopPropagation();buySkin(${skin.id})" ${coins < skin.price ? 'disabled' : ''}>${skin.price} coin</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    // O'ng taraf: Dum ranglari
+    html += '<div style="flex:1; min-width:200px;"><h3>Dum ranglari</h3><div class="skin-grid">';
+    tailColors.forEach(tc => {
+        const owned = tailColor === tc.color || tc.price === 0;
+        const isSelected = tailColor === tc.color;
+        html += `
+            <div class="skin-item ${isSelected ? 'active' : ''}" onclick="selectTail('${tc.color}')">
+                <div style="width:70px;height:70px;background:${tc.color};border-radius:8px;margin:0 auto 8px;border:2px solid #fff;"></div>
+                <p>${tc.name}</p>
+                ${owned 
+                    ? (isSelected ? '<small>Tanlangan</small>' : '<button class="primary small" onclick="event.stopPropagation();selectTail(\'' + tc.color + '\')">Tanlash</button>')
+                    : `<button class="buy-btn ${coins >= tc.price ? '' : 'disabled'}" onclick="event.stopPropagation();buyTail('${tc.color}',${tc.price})" ${coins < tc.price ? 'disabled' : ''}>${tc.price} coin</button>`
+                }
+            </div>
+        `;
+    });
+    html += '</div></div>';
+
+    html += '</div><button onclick="showStartScreen()" class="shop-btn" style="margin-top:20px;">Orqaga</button>';
+
+    document.getElementById('overlayContent').innerHTML = html;
+}
+
+function buySkin(id) {
+    const skin = headSkins.find(s => s.id === id);
+    if (!skin || coins < skin.price || ownedSkins.includes(id)) return;
+    coins -= skin.price;
+    ownedSkins.push(id);
+    saveData();
+    updateCoinsDisplay();
+    showShop();
+}
+
+function selectSkin(id) {
+    if (ownedSkins.includes(id)) {
+        selectedSkin = id;
+        saveData();
+        loadHeadSkin();
+        showShop();
+    }
+}
+
+function buyTail(color, price) {
+    if (coins < price) return;
+    coins -= price;
+    tailColor = color;
+    saveData();
+    updateCoinsDisplay();
+    showShop();
+}
+
+function selectTail(color) {
+    tailColor = color;
+    saveData();
+    showShop();
+}
+
+// O'yin logikasi
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let grid = 35;
+let cols, rows;
+let snake = [];
+let dx = 1, dy = 0;
+let food = {};
+let score = 0;
+let gameRunning = false;
+let gameTimer;
+
+function resize() {
+    const maxSize = Math.min(window.innerWidth*0.92, window.innerHeight*0.68);
+    const cells = Math.floor(maxSize / grid);
+    canvas.width = canvas.height = cells * grid;
+    cols = rows = cells;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function initGame() {
+    snake = [{x:Math.floor(cols/2), y:Math.floor(rows/2)}];
+    dx = 1; dy = 0;
+    score = 0;
+    document.getElementById('score').textContent = 0;
+    placeFood();
+    loadHeadSkin();
+    gameRunning = true;
+}
+
+function placeFood() {
+    do {
+        food.x = Math.floor(Math.random() * cols);
+        food.y = Math.floor(Math.random() * rows);
+    } while (snake.some(s => s.x === food.x && s.y === food.y));
+}
+
+function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle = tailColor; // ← SOTIB OLINGAN DUM RANGI
+    snake.slice(1).forEach(s => ctx.fillRect(s.x*grid+2, s.y*grid+2, grid-4, grid-4));
+
+    ctx.drawImage(headImg, snake[0].x*grid+1, snake[0].y*grid+1, grid-2, grid-2);
+
+    ctx.drawImage(appleImg, food.x*grid+1, food.y*grid+1, grid-2, grid-2);
+}
+
+function update() {
+    if (!gameRunning) return;
+    const head = {x:snake[0].x + dx, y:snake[0].y + dy};
+
+    if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows || snake.some(s => s.x === head.x && s.y === head.y)) {
+        gameOver();
+        return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        coins++;
+        saveData();
+        updateCoinsDisplay();
+        document.getElementById('score').textContent = score;
+        placeFood();
+    } else {
+        snake.pop();
+    }
+
+    draw();
+}
+
+function gameOver() {
+    gameRunning = false;
+    clearInterval(gameTimer);
+    if (score > highScore) {
+        highScore = score;
+        saveData();
+        document.getElementById('high').textContent = highScore;
+    }
+    document.getElementById('overlayContent').innerHTML = `
+        <h2>Yutqazdingiz!</h2>
+        <p>Ball: <b>${score}</b><br>
+           Coins: <b>${coins}</b><br>
+           Rekord: <b>${highScore}</b></p>
+        <button onclick="startGame()" class="primary">Qayta o'ynash</button>
+        <button onclick="showStartScreen()" class="shop-btn">Menu</button>
+    `;
+    document.getElementById('overlay').style.display = 'flex';
+}
+
+function startGame() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('controls').style.display = 'block';
+    initGame();
+    clearInterval(gameTimer);
+    gameTimer = setInterval(update, gameSpeed);
+    draw();
+}
+
+// Boshqaruv
+document.getElementById('up').onclick = () => { if(dy!==1) {dx=0; dy=-1;} };
+document.getElementById('down').onclick = () => { if(dy!==-1) {dx=0; dy=1;} };
+document.getElementById('left').onclick = () => { if(dx!==1) {dx=-1;dy=0;} };
+document.getElementById('right').onclick = () => { if(dx!==-1) {dx=1; dy=0;} };
+
+window.addEventListener('keydown', e => {
+    if (!gameRunning) return;
+    if (e.key==='ArrowUp'   || e.key==='w') { if(dy!==1)  {dx=0; dy=-1;} }
+    if (e.key==='ArrowDown' || e.key==='s') { if(dy!==-1) {dx=0; dy=1;}  }
+    if (e.key==='ArrowLeft' || e.key==='a') { if(dx!==1)  {dx=-1;dy=0;}  }
+    if (e.key==='ArrowRight'|| e.key==='d') { if(dx!==-1) {dx=1; dy=0;}  }
+});
+
+// Start
+updateCoinsDisplay();
+document.getElementById('high').textContent = highScore;
+showStartScreen();
+draw();
+</script>
+</body>
+</html>
