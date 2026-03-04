@@ -33,7 +33,9 @@ button{padding:15px 30px;margin:10px;font-size:1.3rem;border:none;border-radius:
 </style>
 </head>
 <body>
-
+<audio id="bgMusic" loop>
+  <source src="musiqa.mp3" type="audio/mpeg">
+</audio>
 <canvas id="canvas"></canvas>
 
 <div id="hud">
@@ -372,6 +374,10 @@ function gameOver() {
     document.getElementById('overlay').style.display = 'flex';
 }
 
+// Fon musiqasi
+const bgMusic = document.getElementById('bgMusic');
+
+// O'yin boshlanganda musiqa ishga tushadi
 function startGame() {
     document.getElementById('overlay').style.display = 'none';
     document.getElementById('controls').style.display = 'block';
@@ -379,7 +385,35 @@ function startGame() {
     clearInterval(gameTimer);
     gameTimer = setInterval(update, gameSpeed);
     draw();
+
+    // Musiqa o'ynatish (agar oldin to'xtatilgan bo'lsa ham davom etadi)
+    bgMusic.play().catch(e => console.log("Musiqa avto-play bloklandi:", e));
+    bgMusic.volume = 0.3; // 0.0 (jim) dan 1.0 (to‘liq ovoz) gacha
 }
+
+// O'yin tugaganda yoki menyuga qaytganda musiqa to'xtashi mumkin (ixtiyoriy)
+function gameOver() {
+    gameRunning = false;
+    clearInterval(gameTimer);
+    if (score > highScore) {
+        highScore = score;
+        saveData();
+        document.getElementById('high').textContent = highScore;
+    }
+    document.getElementById('overlayContent').innerHTML = `
+        <h2>Yutqazdingiz!</h2>
+        <p>Ball: <b>${score}</b><br>
+           Coins: <b>${coins}</b><br>
+           Rekord: <b>${highScore}</b></p>
+        <button onclick="startGame()" class="primary">Qayta o'ynash</button>
+        <button onclick="showStartScreen()" class="shop-btn">Menu</button>
+    `;
+    document.getElementById('overlay').style.display = 'flex';
+
+    // Musiqa to'xtashi mumkin (agar xohlasangiz)
+    // bgMusic.pause();
+}
+
 
 // Boshqaruv
 document.getElementById('up').onclick = () => { if(dy!==1) {dx=0; dy=-1;} };
