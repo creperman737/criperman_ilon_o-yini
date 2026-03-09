@@ -131,17 +131,17 @@ const PU_UPGRADES = {
 
 const headSkins = [
     {id:0,name:"Steve",src:"rasmlar/bosh4.png",price:0},
-    {id:1,name:"Philza",src:"rasmlar/bosh1.png",price:500},
+    {id:1,name:"Enderman",src:"rasmlar/bosh1.png",price:500},
     {id:2,name:"Wither",src:"rasmlar/bosh2.jpg",price:10000},
     {id:3,name:"Creeper",src:"rasmlar/bosh3.jpg",price:15000},
     {id:4,name:"Skeleton",src:"rasmlar/bosh5.jpg",price:25000},
     {id:5,name:"Dragon",src:"rasmlar/bosh6.png",price:30000},
     {id:6,name:"Zerokhan",src:"rasmlar/bosh7.png",price:20000},
     {id:7,name:"Blaziron",src:"rasmlar/bosh8.png",price:50000},
-    {id:8,name:"Morkel",src:"rasmlar/bosh9.png",price:40000},
-    {id:9,name:"Virex",src:"rasmlar/bosh10.webp",price:60000},
-    {id:10,name:"Herobrine",src:"rasmlar/bosh11.png",price:70000},
-    {id:11,name:"Enderman",src:"rasmlar/bosh12.png",price:80000},
+    {id:8,name:"Dee Karl",src:"rasmlar/bosh9.png",price:40000},
+    {id:9,name:"Herobrine",src:"rasmlar/bosh10.webp",price:60000},
+    {id:10,name:"Pick Me",src:"rasmlar/bosh11.png",price:70000},
+    {id:11,name:"Philza",src:"rasmlar/bosh12.png",price:80000},
     {id:12,name:"Thornyx",src:"rasmlar/bosh13.png",price:90000},
     {id:13,name:"Gravion",src:"rasmlar/bosh14.png",price:100000},
     {id:14,name:"Nexor",src:"rasmlar/bosh15.png",price:110000},
@@ -375,7 +375,7 @@ function showSettings() {
 }
 
 let currentLang = localStorage.getItem('snakeLang') || 'uz';
-let gameSpeed = 200;
+let gameSpeed = 400; // O'rtacha tezlik (ms)
 
 function changeLanguage(lang) {
     currentLang = lang;
